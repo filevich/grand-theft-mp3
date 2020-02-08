@@ -50,23 +50,6 @@ def fetchName(url):
     return parseRawCmdOutput(out).split("\n")
 
 
-# urlsArr : youtube string-url array 
-def urlsToFilenames(urlsArr):
-    print('getting resources\' names:')
-    res = []
-    total = len(urlsArr)
-    count = 0
-    
-    for url in urlsArr:
-        count += 1
-        progress = count / total * 100
-        print(str(round(progress, 0))[:-2] + '%')        
-        _id, name = fetchName(url)
-        res.append([_id, name])
-
-    return res
-
-
 def download(entries):
     total = len(entries)
     count = 0
