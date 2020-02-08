@@ -5,7 +5,7 @@
 	- https://github.com/ytdl-org/youtube-dl/
 	- ffmpeg or avconv and ffprobe or avprobe
 
-### example
+### usage
 	$ python3.7 main.py sync.json
 
 with `./sync.json` looking like:
