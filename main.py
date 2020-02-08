@@ -1,9 +1,9 @@
 import json
 import subprocess
 import sys
+import argparse
 
-JSON_INPUT_FILE = 'sync.json'
-defaultArgs = ["youtube-dl", "--extract-audio", "--audio-format", "mp3"]
+defaultArgs = ["youtube-dl", "--extract-audio", "--audio-format", "mp3", "-o", "%(title)s.%(ext)s"]
 
 # youtube-dl --extract-audio --audio-format mp3 <video URL>
 
@@ -25,7 +25,7 @@ defaultArgs = ["youtube-dl", "--extract-audio", "--audio-format", "mp3"]
 def parseRawCmdOutput(rawCmd):
     return rawCmd.decode("utf-8").strip()
 
-def getDownloadedSongs():
+def getLocallyDownloadedSongs():
     process = subprocess.Popen(['ls'], stdout=subprocess.PIPE)
     out, err = process.communicate()
     
@@ -39,68 +39,72 @@ def getDownloadedSongs():
     return [filename for filename in localFiles if filename[-4:] == '.mp3']
 
 
+def fetchName(url):
+    args = ["youtube-dl", "--get-title", "--get-id", "--skip-download"]
+    process = subprocess.Popen(args + [url], stdout=subprocess.PIPE)
+    out, err = process.communicate()
+    
+    if err:
+        sys.exit("OOPS: \n" + err)
+    
+    return parseRawCmdOutput(out).split("\n")
+
+
 # urlsArr : youtube string-url array 
 def urlsToFilenames(urlsArr):
     print('getting resources\' names:')
     res = []
-    args = ["youtube-dl", "--get-title", "--get-id", "--skip-download"]
     total = len(urlsArr)
     count = 0
     
     for url in urlsArr:
         count += 1
         progress = count / total * 100
-        print(str(round(progress, 0))[:-2] + '%')
-        process = subprocess.Popen(args + [url], stdout=subprocess.PIPE)
-        out, err = process.communicate()
-        
-        if err:
-            sys.exit("OOPS: \n" + err)
-        
-        resourceData = parseRawCmdOutput(out).split("\n")
-        res.append(resourceData)
+        print(str(round(progress, 0))[:-2] + '%')        
+        _id, name = fetchName(url)
+        res.append([_id, name])
 
     return res
 
 
-def download(urls):
-    total = len(urls)
+def download(entries):
+    total = len(entries)
     count = 0
     print('Starting downloading ' + str(total) + ' songs')
 
-    for song in urls:
+    for entry in entries:
         
         count += 1
         progress = count / total * 100
-        print('>> Downloading ' + str(count) + ' of ' + str(total) + ' : ' + str(round(progress, 0))[:-2] + '%')
+        print('Downloading ' + str(count) + ' of ' + str(total) + ' : ' + str(round(progress, 0))[:-2] + '%')
 
-        process = subprocess.Popen(defaultArgs + [song], stdout=subprocess.PIPE)
+        process = subprocess.Popen(defaultArgs + [entry["url"]], stdout=subprocess.PIPE)
         out, err = process.communicate()
         if err:
             sys.exit("OOPS: \n" + err)
 
 
-# theseURLs : array of youtube urls to be download
+# theseEntries : array of entries to be download
 # ignoringTheseFilenames : array of file names to be ignored if match any url's title
-def safeDownload(theseURLs, ignoringTheseFilenames):
-
-    fetchedNames = urlsToFilenames(theseURLs)
-    
-    ok = len(fetchedNames) != len(theseURLs)
-    if ok: 
-        sys.exit("OOPS: something went wrong\n")
+def safeDownload(theseEntries, ignoringTheseFilenames):
+    changes = False
+    print('Syncing...')
 
     # calc how many song are unsynced ~ we are going to download
     unSyncedSongs = []
-    for idx, song in enumerate(theseURLs):
+    for idx, entry in enumerate(theseEntries):
+
+        if "url" not in entry:
+            sys.exit("OOPS: there's an entry without a `url`\n")
+
+        if "name" not in entry:
+            entry["name"], _ = fetchName(entry["url"])
+            changes = True
         
-        futureSongName = fetchedNames[idx][0]
-        futureSongId = fetchedNames[idx][1]
-        futureFilename = futureSongName + "-" + futureSongId + ".mp3"
+        okDownloadIt = str(entry["name"] + ".mp3") not in ignoringTheseFilenames
         
-        okDownloadIt = futureFilename not in ignoringTheseFilenames
         if okDownloadIt:
-            unSyncedSongs.append(song)
+            unSyncedSongs.append(entry)
 
     allSynced = len(unSyncedSongs) == 0
     
@@ -109,20 +113,35 @@ def safeDownload(theseURLs, ignoringTheseFilenames):
         return
 
     download(unSyncedSongs)
+    return changes
 
 
-def main():
+def main(jsonInputFile):
     
     # get the input data
-    with open(JSON_INPUT_FILE, 'r') as file:
+    with open(jsonInputFile, 'r') as file:
         data = json.load(file)
         inputData = data['download']
 
-    # get list of downloaded songs
-    downloaded = getDownloadedSongs()
+    alreadyDownloaded = getLocallyDownloadedSongs()
 
-    safeDownload(theseURLs=inputData, ignoringTheseFilenames=downloaded)
+    changes = safeDownload(theseEntries=inputData, ignoringTheseFilenames=alreadyDownloaded)
+
+    if changes:
+        with open(jsonInputFile, 'w') as outfile:
+            json.dump({'download': inputData}, outfile, indent=2)
 
 
 if __name__ == "__main__":
-    main()
+    
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("jsonInputFile", nargs='?', default='sync.json', help="json input file with links to sync")
+    # optional args
+    # parser.add_argument("--verbosity", help="increase output verbosity")
+    args = parser.parse_args()
+
+    # if args.verbosity:
+    #     print("verbosity detected", args.verbosity)            
+
+    main(args.jsonInputFile)
