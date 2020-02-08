@@ -1,9 +1,11 @@
+![Screenshot 1](https://i.imgur.com/kf2rsTW.jpg)
+
 - parse your sync.json file
 - download its content to ./
 
 ### requires
-	- https://github.com/ytdl-org/youtube-dl/
-	- ffmpeg or avconv and ffprobe or avprobe
+- https://github.com/ytdl-org/youtube-dl/
+- ffmpeg or avconv and ffprobe or avprobe
 
 ### usage
 	$ python3.7 main.py sync.json
