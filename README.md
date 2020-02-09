@@ -9,26 +9,44 @@
 
 ### usage
 	$ python3.7 main.py sync.json
+	
+	$ python3.7 main.py --help
+	usage: main.py [-h] [--allInRoot] [jsonInputFile]
+
+	positional arguments:
+	  jsonInputFile  json input file with links to sync
+
+	optional arguments:
+	  -h, --help     show this help message and exit
+	  --allInRoot    download all songs in current dir skipping subfolders
+
+
+### recommended
+in your term rc file: `alias sync="python ~/Workspace/python/grand-theft-mp3/main.py"`
+
 
 with `./sync.json` looking like:
 
 	{
-	  "download": [
+	  "./": [
 	    {
-	      "url": "https://www.youtube.com/watch?v=OxnxJpFAzqg&feature=youtu.be",
-	      "name": "Walking On A Dream x Yes Indeed (JStrain Mashup)"
+	      "url": "https://www.youtube.com/watch?v=OxnxJpFAzqg&feature=youtu.be"
 	    },
 	    {
-	      "url": "https://www.youtube.com/watch?v=B3gbisdtJnA",
-	      "name": "Shakira - Ciega, Sordomuda (Video Oficial)"
+	      "url": "https://www.youtube.com/watch?v=B3gbisdtJnA"
 	    },
 	    {
-	      "url": "https://www.youtube.com/watch?v=n3VjKtROscQ",
-	      "name": "Lizzo - Juice (Lyrics)"
+	      "url": "https://www.youtube.com/watch?v=n3VjKtROscQ"
 	    },
 	    {
 	      "url": "https://www.youtube.com/watch?v=C-u5WLJ9Yk4",
 	      "name": "Britney Spears - ...Baby One More Time"
+	    }
+	  ],
+	  "classical": [
+	    {
+	      "url": "https://www.youtube.com/watch?v=oy2zDJPIgwc",
+	      "name": "Eine Kleine Nachtmusik - Mozart"
 	    }
 	  ]
 	}

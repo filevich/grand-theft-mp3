@@ -1,5 +1,5 @@
 {
-  "download": [
+  "./": [
     {
       "url": "https://www.youtube.com/watch?v=OxnxJpFAzqg&feature=youtu.be",
       "name": "Walking On A Dream x Yes Indeed (JStrain Mashup)"
@@ -15,6 +15,12 @@
     {
       "url": "https://www.youtube.com/watch?v=C-u5WLJ9Yk4",
       "name": "Britney Spears - ...Baby One More Time"
+    }
+  ],
+  "classical": [
+    {
+      "url": "https://www.youtube.com/watch?v=oy2zDJPIgwc",
+      "name": "Eine Kleine Nachtmusik - Mozart"
     }
   ]
 }

@@ -1,9 +1,11 @@
+import re
 import json
 import subprocess
 import sys
 import argparse
+import os
 
-defaultArgs = ["youtube-dl", "--extract-audio", "--audio-format", "mp3", "-o", "%(title)s.%(ext)s"]
+defaultArgs = ["youtube-dl", "--extract-audio", "--audio-format", "mp3", "-o"]
 
 # youtube-dl --extract-audio --audio-format mp3 <video URL>
 
@@ -25,8 +27,8 @@ defaultArgs = ["youtube-dl", "--extract-audio", "--audio-format", "mp3", "-o", "
 def parseRawCmdOutput(rawCmd):
     return rawCmd.decode("utf-8").strip()
 
-def getLocallyDownloadedSongs():
-    process = subprocess.Popen(['ls'], stdout=subprocess.PIPE)
+def getLocallyDownloadedSongs(subfolder):
+    process = subprocess.Popen(['ls', subfolder], stdout=subprocess.PIPE)
     out, err = process.communicate()
     
     if err:
@@ -50,18 +52,20 @@ def fetchName(url):
     return parseRawCmdOutput(out).split("\n")
 
 
-def download(entries):
+def download(entries, here):
     total = len(entries)
     count = 0
-    print('Starting downloading ' + str(total) + ' songs')
 
     for entry in entries:
         
         count += 1
         progress = count / total * 100
-        print('Downloading ' + str(count) + ' of ' + str(total) + ' : ' + str(round(progress, 0))[:-2] + '%')
+        print('  Downloading [' + str(count) + '/' + str(total) + '] ' + entry['name'])
 
-        process = subprocess.Popen(defaultArgs + [entry["url"]], stdout=subprocess.PIPE)
+        url = entry["url"]
+        dwnPath = here + "/" + "%(title)s.%(ext)s"
+
+        process = subprocess.Popen(defaultArgs + [dwnPath, url], stdout=subprocess.PIPE)
         out, err = process.communicate()
         if err:
             sys.exit("OOPS: \n" + err)
@@ -69,9 +73,9 @@ def download(entries):
 
 # theseEntries : array of entries to be download
 # ignoringTheseFilenames : array of file names to be ignored if match any url's title
-def safeDownload(theseEntries, ignoringTheseFilenames):
+# here : path to subfolder dest
+def safeDownload(theseEntries, ignoringTheseFilenames, here):
     changes = False
-    print('Syncing...')
 
     # calc how many song are unsynced ~ we are going to download
     unSyncedSongs = []
@@ -92,27 +96,40 @@ def safeDownload(theseEntries, ignoringTheseFilenames):
     allSynced = len(unSyncedSongs) == 0
     
     if allSynced:
-        print('There\'s nothing to download; it\'s all synced')
+        print('  It\'s all synced in here.')
         return
 
-    download(unSyncedSongs)
+    download(unSyncedSongs, here)
     return changes
 
 
-def main(jsonInputFile):
+def main(jsonInputFile, allInRoot):
     
     # get the input data
     with open(jsonInputFile, 'r') as file:
         data = json.load(file)
-        inputData = data['download']
 
-    alreadyDownloaded = getLocallyDownloadedSongs()
+    changes = False
 
-    changes = safeDownload(theseEntries=inputData, ignoringTheseFilenames=alreadyDownloaded)
+    for subfolder in data:
+
+        subfolderWithNoLastSlash = subfolder[:-1] if subfolder.endswith('/') else subfolder
+        dwnSubFolder = '.' if allInRoot else subfolderWithNoLastSlash
+
+        # safe check: does `subfolder` actually exists?
+        process = subprocess.Popen(["mkdir", "-p", dwnSubFolder], stdout=subprocess.PIPE)
+        out, err = process.communicate()
+        if err:
+            sys.exit("OOPS: \n" + err)
+
+        alreadyDownloaded = getLocallyDownloadedSongs(dwnSubFolder)
+
+        print('\nSyncing subfolder "%s" (with %d songs)...' %(subfolder, len(data[subfolder])) )
+        changes = changes or safeDownload(theseEntries=data[subfolder], ignoringTheseFilenames=alreadyDownloaded, here=dwnSubFolder)
 
     if changes:
         with open(jsonInputFile, 'w') as outfile:
-            json.dump({'download': inputData}, outfile, indent=2)
+            json.dump(data, outfile, indent=2)
 
 
 if __name__ == "__main__":
@@ -120,11 +137,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("jsonInputFile", nargs='?', default='sync.json', help="json input file with links to sync")
-    # optional args
-    # parser.add_argument("--verbosity", help="increase output verbosity")
+    # optional flags
+    parser.add_argument("--allInRoot", action="store_true", help="download all songs in current dir skipping subfolders")
     args = parser.parse_args()
 
-    # if args.verbosity:
-    #     print("verbosity detected", args.verbosity)            
-
-    main(args.jsonInputFile)
+    main(args.jsonInputFile, args.allInRoot)
