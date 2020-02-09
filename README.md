@@ -1,4 +1,4 @@
-![Screenshot 1](https://i.imgur.com/kf2rsTW.jpg)
+![Screenshot 1](https://i.imgur.com/yODiRvD.png)
 
 - parse your sync.json file
 - download its content to ./
